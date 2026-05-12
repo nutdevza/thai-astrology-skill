@@ -1,0 +1,45 @@
+[project]
+name = "thai-astrology-skill"
+version = "0.1.0"
+description = "Claude Code skill for Thai astrology (โหราศาสตร์ไทย) — chart casting, taksa naming, and auspicious time selection using Swiss Ephemeris"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Prem Chotipanit", email = "prem.ch@ku.th" },
+]
+keywords = ["astrology", "thai", "horoscope", "swiss-ephemeris", "claude-code", "claude-skill"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Thai",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Religion",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "pyswisseph>=2.10.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/premchotipanit/thai-astrology-skill"
+Issues = "https://github.com/premchotipanit/thai-astrology-skill/issues"
+
+[project.scripts]
+thai-cast-chart = "scripts.cast_chart:main"
+thai-taksa = "scripts.taksa:main"
+thai-auspicious-time = "scripts.auspicious_time:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scripts"]
