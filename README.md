@@ -39,21 +39,33 @@ cd thai-astrology-skill
 uv sync
 ```
 
-### As a Claude Code skill
+### As a Claude Code plugin marketplace (recommended for teams)
 
-Copy or symlink this repo into Claude Code's skills directory:
+This repo is a Claude Code plugin marketplace — teammates can install the skill with one command:
+
+```bash
+# 1) Register the marketplace (run once per machine)
+/plugin marketplace add batprem/thai-astrology-skill
+
+# 2) Install the skill
+/plugin install thai-astrology@thai-astrology-skill
+```
+
+After install, Claude Code triggers the skill automatically when you mention โหราศาสตร์, ดูดวง, ผูกดวง, ลัคนา, ราศี, ฤกษ์, ทักษา, or just give a birthdate.
+
+### As a plain Claude Code skill (alt — single user)
+
+Copy or symlink the skill folder into Claude Code's skills directory:
 
 ```bash
 # Project-level (in your project)
 mkdir -p .claude/skills
-ln -s "$(pwd)" .claude/skills/thai-astrology
+ln -s "$(pwd)/skills/thai-astrology" .claude/skills/thai-astrology
 
 # OR global (all projects)
 mkdir -p ~/.claude/skills
-ln -s "$(pwd)" ~/.claude/skills/thai-astrology
+ln -s "$(pwd)/skills/thai-astrology" ~/.claude/skills/thai-astrology
 ```
-
-Then in Claude Code, the skill triggers automatically when you mention โหราศาสตร์, ดูดวง, ผูกดวง, ลัคนา, ราศี, ฤกษ์, ทักษา, or just give a birthdate.
 
 ---
 
@@ -83,21 +95,13 @@ Skill จะอ่าน `SKILL.md` → ขอข้อมูลที่ขา�
 
 ```bash
 # 1. ผูกดวง
-uv run python scripts/cast_chart.py --date 2535-01-15 --time 08:30 --place กรุงเทพ
+uv run python skills/thai-astrology/scripts/cast_chart.py --date 2535-01-15 --time 08:30 --place กรุงเทพ
 
 # 2. วิเคราะห์ทักษา
-uv run python scripts/taksa.py --day อังคาร --name ภูมิ
+uv run python skills/thai-astrology/scripts/taksa.py --day อังคาร --name ภูมิ
 
 # 3. หาฤกษ์มงคล
-uv run python scripts/auspicious_time.py --from 2569-10-01 --to 2569-10-31 --purpose แต่งงาน --top 5
-```
-
-หรือถ้าติดตั้งด้วย `uv pip install -e .` จะได้ console scripts:
-
-```bash
-thai-cast-chart --date 2535-01-15 --time 08:30 --place กรุงเทพ
-thai-taksa --day อังคาร --name ภูมิ
-thai-auspicious-time --from 2569-10-01 --to 2569-10-31 --purpose แต่งงาน
+uv run python skills/thai-astrology/scripts/auspicious_time.py --from 2569-10-01 --to 2569-10-31 --purpose แต่งงาน --top 5
 ```
 
 ---
@@ -105,25 +109,29 @@ thai-auspicious-time --from 2569-10-01 --to 2569-10-31 --purpose แต่งง
 ## 📂 Project Structure
 
 ```
-thai-astrology-skill/
-├── SKILL.md                   # Skill definition + workflow + templates
-├── pyproject.toml             # uv/pip metadata + dependencies
-├── README.md                  # คุณกำลังอ่านอยู่
-├── LICENSE                    # MIT
+thai-astrology-skill/             # ← Claude Code plugin marketplace root
+├── .claude-plugin/
+│   ├── marketplace.json          # marketplace metadata
+│   └── plugin.json               # plugin metadata
 │
-├── scripts/                   # Python tools
-│   ├── cast_chart.py          # ผูกดวงด้วย Swiss Ephemeris
-│   ├── taksa.py               # วิเคราะห์ทักษา + ตั้งชื่อ
-│   └── auspicious_time.py     # หาฤกษ์มงคล
+├── skills/
+│   └── thai-astrology/           # ← the skill
+│       ├── SKILL.md              # Skill definition + workflow + templates
+│       ├── scripts/              # Python tools
+│       │   ├── cast_chart.py     # ผูกดวงด้วย Swiss Ephemeris
+│       │   ├── taksa.py          # วิเคราะห์ทักษา + ตั้งชื่อ
+│       │   └── auspicious_time.py # หาฤกษ์มงคล
+│       ├── references/           # Knowledge base (loaded on demand)
+│       │   ├── bhava_meanings.md # ความหมายของภพ 12 ภพ
+│       │   ├── planet_standards.md # เกษตร/อุจ/ประ/นิจ
+│       │   ├── taksa_system.md   # ระบบทักษา 8 หมวด
+│       │   └── aspects.md        # มุมสัมพันธ์ดาว
+│       └── evals/
+│           └── evals.json        # 3 test prompts + assertions
 │
-├── references/                # Knowledge base (loaded on demand)
-│   ├── bhava_meanings.md      # ความหมายของภพ 12 ภพ
-│   ├── planet_standards.md    # เกษตร/อุจ/ประ/นิจ
-│   ├── taksa_system.md        # ระบบทักษา 8 หมวด
-│   └── aspects.md             # มุมสัมพันธ์ดาว
-│
-└── evals/                     # Test cases
-    └── evals.json             # 3 test prompts + assertions
+├── pyproject.toml                # uv/pip metadata + dependencies
+├── README.md                     # คุณกำลังอ่านอยู่
+└── LICENSE                       # MIT
 ```
 
 ---
@@ -164,11 +172,11 @@ Contributions welcome! Please:
 
 ### Adding cities
 
-Thai cities are listed in `scripts/cast_chart.py` (`THAI_CITIES` dict). Add new entries as `(latitude, longitude)` tuples.
+Thai cities are listed in `skills/thai-astrology/scripts/cast_chart.py` (`THAI_CITIES` dict). Add new entries as `(latitude, longitude)` tuples.
 
 ### Improving interpretations
 
-References in `references/*.md` are the source of truth for skill interpretations. Edit those Markdown files to refine wording.
+References in `skills/thai-astrology/references/*.md` are the source of truth for skill interpretations. Edit those Markdown files to refine wording.
 
 ---
 

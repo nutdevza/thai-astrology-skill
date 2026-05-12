@@ -1,0 +1,16 @@
+{
+  "name": "thai-astrology-skill",
+  "owner": {
+    "name": "Prem Chotipanit",
+    "email": "prem.ch@ku.th",
+    "url": "https://github.com/premchotipanit"
+  },
+  "plugins": [
+    {
+      "name": "thai-astrology",
+      "source": "./",
+      "description": "Claude skill สำหรับโหราศาสตร์ไทย — ผูกดวง, ทักษา, เลือกฤกษ์, พยากรณ์รายวัน/รายปี",
+      "version": "0.1.0"
+    }
+  ]
+}

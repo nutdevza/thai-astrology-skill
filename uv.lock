@@ -34,7 +34,7 @@ wheels = [
 [[package]]
 name = "thai-astrology-skill"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "pyswisseph" },
 ]
