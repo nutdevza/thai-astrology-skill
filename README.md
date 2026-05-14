@@ -138,7 +138,9 @@ thai-astrology-skill/             # ← Claude Code plugin marketplace root
 
 ## 🧪 Testing the skill
 
-Eval results from initial benchmarks (with-skill vs. baseline Claude):
+### Eval results
+
+Initial benchmarks (with-skill vs. baseline Claude):
 
 | Test case                              | With skill | Baseline | Δ           |
 |----------------------------------------|------------|----------|-------------|
@@ -148,6 +150,52 @@ Eval results from initial benchmarks (with-skill vs. baseline Claude):
 | **Average**                            | **100%**   | **85.7%**| **+14.3%**  |
 
 The biggest gain is in chart casting — baseline Claude tends to **guess planetary positions incorrectly** (wrong ascendant, wrong planet rasi) when no ephemeris is available.
+
+### Eval set
+
+Test cases อยู่ที่ [`skills/thai-astrology/evals/evals.json`](skills/thai-astrology/evals/evals.json) — แต่ละ case มี:
+
+- `prompt` — ข้อความที่ผู้ใช้พิมพ์ (เช่น "ดูดวงให้หน่อย เกิด 15 มกราคม 2535 …")
+- `expected_output` — สิ่งที่ skill ควรทำในระดับภาพรวม
+- `assertions[]` — checklist สำหรับให้คนหรือ Claude grader ตรวจคำตอบทีละข้อ
+
+ครอบคลุม 3 สถานการณ์: ผูกดวง, วิเคราะห์ชื่อตามทักษา, เลือกฤกษ์แต่งงาน
+
+### วิธีรัน evals
+
+**1. แบบมือ (สั้นและตรงประเด็นที่สุด)** — เปิด Claude Code ที่โฟลเดอร์นี้ แล้ว copy `prompt` ของแต่ละ case ไปวาง ตรวจคำตอบเทียบกับ `assertions[]` ทีละข้อ
+
+```bash
+# ดู prompt + assertions ของทุก case
+jq '.evals[] | {id, name, prompt, assertions}' \
+  skills/thai-astrology/evals/evals.json
+```
+
+**2. แบบอัตโนมัติด้วย `skill-creator`** (แนะนำเมื่อแก้ skill แล้วอยากเทียบรอบใหม่ vs. รอบเก่า)
+
+ใน Claude Code:
+
+```
+/skill-creator
+```
+
+แล้วบอกว่า "รัน evals สำหรับ skill thai-astrology" — skill-creator จะอ่าน `evals.json`, รัน prompts ทั้งหมดทั้งแบบ with-skill และ baseline, เก็บผลใน `thai-astrology-workspace/iteration-N/` แล้วสร้าง eval viewer (HTML) ให้รีวิว
+
+**3. Trigger eval (description ดีพอจน Claude เรียก skill เองหรือยัง)**
+
+```bash
+python ~/.claude/skills/skill-creator/scripts/run_eval.py \
+  --eval-set skills/thai-astrology/evals/evals.json \
+  --skill-path skills/thai-astrology \
+  --runs-per-query 3 \
+  --verbose
+```
+
+แสดง trigger rate ของแต่ละ prompt — ถ้าต่ำกว่า 0.5 แปลว่า description ใน `SKILL.md` ยังไม่ดึงดูดพอ ควรปรับคีย์เวิร์ด
+
+### เพิ่ม test case ใหม่
+
+เปิด `skills/thai-astrology/evals/evals.json` แล้ว append entry ใหม่เข้าใน `evals[]` ตาม schema เดิม (`id`, `name`, `prompt`, `expected_output`, `assertions[]`, `files[]`) — ไม่มี id ใหม่จะ collide เพราะรันด้วย index
 
 ---
 
