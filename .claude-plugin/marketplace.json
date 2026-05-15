@@ -3,14 +3,14 @@
   "owner": {
     "name": "Prem Chotipanit",
     "email": "prem.ch@ku.th",
-    "url": "https://github.com/premchotipanit"
+    "url": "https://github.com/batprem/thai-astrology-skill"
   },
   "plugins": [
     {
       "name": "thai-astrology",
       "source": "./",
       "description": "Claude skill สำหรับโหราศาสตร์ไทย — ผูกดวง, ทักษา, เลือกฤกษ์, พยากรณ์รายวัน/รายปี",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }
