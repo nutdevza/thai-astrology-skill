@@ -1,12 +1,12 @@
 {
   "name": "thai-astrology",
-  "version": "0.2.1",
-  "description": "ผูกดวงและพยากรณ์ดวงชะตาตามหลักโหราศาสตร์ไทย — คำนวณตำแหน่งดาวด้วย Swiss Ephemeris, ตีความ 12 ภพ, ทักษาตั้งชื่อมงคล, เลือกฤกษ์, และพยากรณ์รายวัน/รายปี",
+  "version": "0.3.0",
+  "description": "ผูกดวงและพยากรณ์ดวงชะตาตามหลักโหราศาสตร์ไทย — 2 เอนจิน: สุริยยาตร์ตำราไทยดั้งเดิม (ไม่ต้องมี pyswisseph, ตรงกับที่โหรไทยแบบตำราอ่านจริง) และ Swiss Ephemeris houses() (ลัคนาดาราศาสตร์จริง สำหรับอ้างอิง/เทียบระบบ) — ตีความ 12 ภพ, ทักษาตั้งชื่อมงคล, เลือกฤกษ์, และพยากรณ์รายวัน/รายปี",
   "author": {
     "name": "Prem Chotipanit",
     "email": "prem.ch@ku.th"
   },
-  "repository": "https://github.com/batprem/thai-astrology-skill",
+  "repository": "https://github.com/nutdevza/thai-astrology-skill",
   "license": "MIT",
   "keywords": [
     "thai-astrology",
