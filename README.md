@@ -1,8 +1,8 @@
 # Thai Astrology Skill (โหราศาสตร์ไทย)
 
-A [Claude Code](https://claude.com/claude-code) skill for Thai astrology — birth chart casting, fortune-telling, auspicious naming (ทักษา), and time selection (ฤกษ์) — using **Swiss Ephemeris** for professional-grade planetary calculations.
+A [Claude Code](https://claude.com/claude-code) skill for Thai astrology — birth chart casting, fortune-telling, auspicious naming (ทักษา), and time selection (ฤกษ์).
 
-> Skill สำหรับ Claude Code เพื่อทำนายดวงตามหลักโหราศาสตร์ไทย ผูกดวง ตั้งชื่อมงคล และเลือกฤกษ์ โดยใช้ Swiss Ephemeris คำนวณตำแหน่งดาวอย่างแม่นยำ
+> Skill สำหรับ Claude Code เพื่อทำนายดวงตามหลักโหราศาสตร์ไทย ผูกดวง ตั้งชื่อมงคล และเลือกฤกษ์
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -10,9 +10,11 @@ A [Claude Code](https://claude.com/claude-code) skill for Thai astrology — bir
 
 ---
 
+> **Fork of [batprem/thai-astrology-skill](https://github.com/batprem/thai-astrology-skill).** This fork adds a second calculation engine, `--ayanamsa suriyayat` (สุริยยาตร์): a from-scratch port of the traditional Thai suriyayat method (ported from [kongesque/thai-astrology](https://github.com/kongesque/thai-astrology), extended to keep degree-level precision for every planet instead of just sign) — no ephemeris library required, and verified to reproduce a real Thai astrologer's traditional reading exactly (see `zodiac-system-check-natal-vs-tape.md` in the source project). The original `--ayanamsa tropical`/`lahiri` (Swiss Ephemeris `houses()`) engine is unchanged and stays available for astronomically-real reference/comparison — the two give different ascendants (they measure different things), see the "เครื่องมือคำนวณ 2 เอนจิน" section in `SKILL.md`. Birth time also still defaults to 06:00 (sunrise) when unknown, rather than blocking or guessing 06:55.
+
 ## ✨ Features
 
-- 🌟 **ผูกดวง (Birth Chart Casting)** — คำนวณตำแหน่งดาว 10 ดวง + ลัคนา + ภพ 12 ด้วย Swiss Ephemeris
+- 🌟 **ผูกดวง (Birth Chart Casting)** — คำนวณตำแหน่งดาว 10 ดวง + ลัคนา + ภพ 12 ด้วยเอนจิน 2 แบบ: สุริยยาตร์ตำราไทยดั้งเดิม (ไม่ต้องมี ephemeris) หรือ Swiss Ephemeris (ลัคนาดาราศาสตร์จริง)
 - 📝 **ตั้งชื่อมงคล (Auspicious Naming)** — วิเคราะห์อักษรไทยตามระบบทักษาปกรณ์ 8 หมวด
 - 🗓️ **เลือกฤกษ์ (Auspicious Time)** — แนะนำวันมงคลตามวัตถุประสงค์ (แต่งงาน ขึ้นบ้าน เปิดร้าน ฯลฯ)
 - 🔮 **พยากรณ์รายวัน/รายปี** — เทียบดวงจรกับดวงกำเนิดเพื่อชี้เหตุการณ์
@@ -94,7 +96,10 @@ Skill จะอ่าน `SKILL.md` → ขอข้อมูลที่ขา�
 หลังจาก `uv sync` แล้ว สามารถรัน scripts ตรง ๆ ได้:
 
 ```bash
-# 1. ผูกดวง
+# 1. ผูกดวง — สุริยยาตร์ตำราไทยดั้งเดิม (แนะนำ ไม่ต้องมี pyswisseph)
+uv run python skills/thai-astrology/scripts/cast_chart.py --date 2535-01-15 --time 08:30 --place กรุงเทพ --ayanamsa suriyayat
+
+# 1b. ผูกดวง — Swiss Ephemeris (ลัคนาดาราศาสตร์จริง ต้องมี pyswisseph)
 uv run python skills/thai-astrology/scripts/cast_chart.py --date 2535-01-15 --time 08:30 --place กรุงเทพ
 
 # 2. วิเคราะห์ทักษา
@@ -118,7 +123,8 @@ thai-astrology-skill/             # ← Claude Code plugin marketplace root
 │   └── thai-astrology/           # ← the skill
 │       ├── SKILL.md              # Skill definition + workflow + templates
 │       ├── scripts/              # Python tools
-│       │   ├── cast_chart.py     # ผูกดวงด้วย Swiss Ephemeris
+│       │   ├── cast_chart.py     # ผูกดวง — 2 เอนจิน (suriyayat / Swiss tropical+lahiri)
+│       │   ├── suriyayat_calc.py # เอนจินสุริยยาตร์ตำราไทย (ไม่พึ่ง ephemeris) ใช้โดย cast_chart.py
 │       │   ├── taksa.py          # วิเคราะห์ทักษา + ตั้งชื่อ
 │       │   └── auspicious_time.py # หาฤกษ์มงคล
 │       ├── references/           # Knowledge base (loaded on demand)
@@ -248,3 +254,20 @@ References in `skills/thai-astrology/references/*.md` are the source of truth fo
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE)
+
+
+## โหมดเทียบสองระบบ (`--compare`) — เพิ่มใน 0.2.0
+
+```bash
+python skills/thai-astrology/scripts/cast_chart.py \
+  --date 2541-01-05 --time 22:50 --lat 18.29 --lon 99.49 --compare
+```
+
+พิมพ์ผลสายนะ (ทรอปิคัล) กับนิรายนะ (Lahiri) เคียงกัน พร้อมค่า ayanamsa ณ วันเกิด
+ฤกษ์และเจ้าฤกษ์ ตรียางค์และเจ้าตรียางค์ ดิถี อัตราลัคนาเดินเป็นองศาต่อนาที
+และระยะจากลัคนาถึงเส้นแบ่งราศีคิดเป็นนาทีของเวลาเกิด
+
+เพิ่ม `--format json` ถ้าต้องการโครงสร้างข้อมูลแทนตาราง
+
+โหมดปกติ (ไม่ใส่ `--compare`) เพิ่มฟิลด์ `ฤกษ์` `ตรียางค์` `ดิถี` `ayanamsa`
+และ `julian_day_ut` เข้าไปใน JSON ด้วย ฟิลด์เดิมทั้งหมดยังอยู่ครบ
