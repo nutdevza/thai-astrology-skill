@@ -1,6 +1,6 @@
 {
   "name": "thai-astrology",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "ผูกดวงและพยากรณ์ดวงชะตาตามหลักโหราศาสตร์ไทย — คำนวณตำแหน่งดาวด้วย Swiss Ephemeris, ตีความ 12 ภพ, ทักษาตั้งชื่อมงคล, เลือกฤกษ์, และพยากรณ์รายวัน/รายปี",
   "author": {
     "name": "Prem Chotipanit",
