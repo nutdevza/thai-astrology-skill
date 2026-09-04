@@ -5,16 +5,30 @@ Usage:
     python cast_chart.py --date 2535-01-15 --time 08:30 --place กรุงเทพ
     python cast_chart.py --date 2535-01-15 --time 08:30 --lat 13.7563 --lon 100.5018
     python cast_chart.py --date 1992-01-15 --time 08:30 --place bangkok --ayanamsa lahiri
+    python cast_chart.py --date 2541-01-05 --time 22:50 --place ลำปาง --ayanamsa suriyayat
 """
+from __future__ import annotations
+
 import argparse
 import json
 import sys
 
+# pyswisseph จำเป็นเฉพาะโหมด --ayanamsa tropical/lahiri (Swiss Ephemeris houses())
+# โหมด --ayanamsa suriyayat (ตำราไทยดั้งเดิม) ไม่พึ่ง ephemeris เลย จึงใช้ได้แม้ไม่มี pyswisseph
 try:
     import swisseph as swe
 except ImportError:
-    print("ERROR: ต้องติดตั้ง pyswisseph ก่อน → pip install pyswisseph", file=sys.stderr)
-    sys.exit(1)
+    swe = None
+
+import suriyayat_calc
+
+
+def _require_swisseph():
+    if swe is None:
+        print("ERROR: --ayanamsa tropical/lahiri (และ --compare) ต้องติดตั้ง pyswisseph ก่อน "
+              "→ pip install pyswisseph  |  ถ้าไม่อยากติดตั้ง ให้ใช้ --ayanamsa suriyayat แทน "
+              "(ตำราไทยดั้งเดิม ไม่ต้องมี pyswisseph)", file=sys.stderr)
+        sys.exit(1)
 
 
 # พิกัดเมืองหลักของไทย (ละติจูด, ลองจิจูด)
@@ -100,7 +114,8 @@ THAI_CITIES = {
     "พระนครศรีอยุธยา": (14.3692, 100.5876),
 }
 
-# ดาวพระเคราะห์ในระบบไทย (เลขไทย: ดาว, swe_id)
+# ดาวพระเคราะห์ในระบบไทย (เลขไทย: ดาว, swe_id) — ต้องมี pyswisseph เท่านั้น ใช้กับ
+# --ayanamsa tropical/lahiri; โหมด suriyayat ไม่ใช้ตัวแปรนี้เลย จึงปล่อยว่างได้ถ้าไม่มี pyswisseph
 PLANETS_THAI = [
     ("๑", "อาทิตย์", swe.SUN),
     ("๒", "จันทร์", swe.MOON),
@@ -111,7 +126,7 @@ PLANETS_THAI = [
     ("๗", "เสาร์", swe.SATURN),
     ("๘", "ราหู", swe.MEAN_NODE),  # จุดโหนดเฉลี่ย
     ("๐", "มฤตยู", swe.URANUS),
-]
+] if swe is not None else []
 
 # ราศี 12 ราศี (ตามลำดับ 0-11)
 RASI_NAMES = ["เมษ", "พฤษภ", "เมถุน", "กรกฎ", "สิงห์", "กันย์",
@@ -273,7 +288,8 @@ def evaluate_standard(planet_name: str, rasi: str, deg_in_rasi: float):
 def cast_chart(date_str: str, time_str: str, lat: float, lon: float,
                ayanamsa: str = "tropical", tz_offset: float = 7.0,
                time_estimated: bool = False):
-    """คำนวณดวงชะตา return dict พร้อมข้อมูลครบ"""
+    """คำนวณดวงชะตา (Swiss Ephemeris — houses() จริงทางดาราศาสตร์) return dict พร้อมข้อมูลครบ"""
+    _require_swisseph()
     year, month, day = parse_date_thai_or_western(date_str)
     hour, minute = map(int, time_str.split(":"))
 
@@ -369,6 +385,111 @@ def cast_chart(date_str: str, time_str: str, lat: float, lon: float,
         "ดิถี": tithi_info(sun_lon, moon_lon),
         "ดาว": planets_out,
         "ภพ": bhava_map
+    }
+
+
+# ---------------------------------------------------------------------------
+# สุริยยาตร์ (ตำราไทยดั้งเดิม) — ไม่พึ่ง ephemeris ใด ๆ พอร์ตจาก kongesque/thai-astrology
+# ดูรายละเอียด/การตรวจสอบใน suriyayat_calc.py และ zodiac-system-check-natal-vs-tape.md §13
+# ในโปรเจกต์ต้นทาง (nutdevza/thai-astrology) ระบบนี้คือตัวที่ reproduce ดวงที่โหรไทยอ่านจริง
+# ตรงกับเทปครบ 8/8 จุด ส่วน --ayanamsa tropical/lahiri (Swiss houses()) ให้ลัคนาดาราศาสตร์จริง
+# ซึ่ง "ถูก" ในความหมายทางดาราศาสตร์ แต่ "ไม่ตรง" กับที่โหรไทยแบบตำราใช้อ่านดวง
+# ---------------------------------------------------------------------------
+
+SURIYAYAT_PLANETS = [
+    ("๑", "อาทิตย์", "sun"), ("๒", "จันทร์", "moon"), ("๓", "อังคาร", "mars"),
+    ("๔", "พุธ", "mercury"), ("๕", "พฤหัสบดี", "jupiter"), ("๖", "ศุกร์", "venus"),
+    ("๗", "เสาร์", "saturn"), ("๘", "ราหู", "rahu"), ("๙", "เกตุ", "ketu"),
+    ("๐", "มฤตยู", "uranus"),
+]
+
+
+def cast_chart_suriyayat(date_str: str, time_str: str, province: str | None = None,
+                          sunrise_mode: str = "fixed", sunrise_offset: float | None = None,
+                          time_estimated: bool = False):
+    """ผูกดวงแบบสุริยยาตร์ (ตำราไทยดั้งเดิม) คืน dict โครงเดียวกับ cast_chart()
+
+    sunrise_mode:
+      "fixed"    (ค่าเริ่มต้น) — อาทิตย์ขึ้น 06:00 คงที่ทุกจังหวัด ตามที่โปรเจกต์ต้นทางยืนยันแล้วว่า
+                 ตรงกับดวงที่โหรไทยแบบตำราอ่านจริง (ดู §6/§8/§13 ของ zodiac-system-check-natal-vs-tape.md)
+      "province" — ใช้ตารางนาทีชดเชยอาทิตย์ขึ้นจริงต่อจังหวัด (จาก kongesque) ต้องระบุ province
+                 เป็นชื่อจังหวัดภาษาไทยเต็ม เช่น "ลำปาง" ไม่รู้จักจะ fallback เป็น 18 นาที (กรุงเทพฯ)
+      ระบุ sunrise_offset ตรง ๆ (นาที) เพื่อ override ทั้งสองโหมดข้างบน
+    """
+    year, month, day = parse_date_thai_or_western(date_str)
+    hour, minute = map(int, time_str.split(":"))
+
+    if sunrise_offset is not None:
+        offset = sunrise_offset
+    elif sunrise_mode == "province":
+        offset = suriyayat_calc.PROVINCE_TIME_OFFSETS.get(province, 18) if province else 18
+    else:
+        offset = 0.0
+
+    result = suriyayat_calc.calculate_positions(day=day, month_th=month, year_be=year + 543,
+                                                  hour=hour, minute=minute,
+                                                  sunrise_offset_minutes=offset)
+    lon = result["longitudes"]
+
+    planets_out = []
+    for thai_num, name, key in SURIYAYAT_PLANETS:
+        lon_deg = lon[key]
+        rasi, deg_in_rasi, _ = degrees_to_rasi(lon_deg)
+        standard = evaluate_standard(name, rasi, deg_in_rasi)
+        planets_out.append({
+            "เลข": thai_num,
+            "ดาว": name,
+            "ราศี": rasi,
+            "องศา": round(deg_in_rasi, 2),
+            "longitude": round(lon_deg, 4),
+            "มาตรฐาน": standard,
+            "ฤกษ์": nakshatra_info(lon_deg)["ฤกษ์"],
+            "นักษัตร": nakshatra_info(lon_deg)["นักษัตร"],
+        })
+
+    lakkana_lon = lon["ascendant"]
+    lakkana_rasi, lakkana_deg, lakkana_idx = degrees_to_rasi(lakkana_lon)
+    lakkana_lord = RASI_LORDS[lakkana_rasi]
+
+    bhava_map = {}
+    for i in range(12):
+        rasi_index = (lakkana_idx + i) % 12
+        bhava_map[BHAVA_NAMES[i]] = {
+            "ภพที่": i + 1,
+            "ราศี": RASI_NAMES[rasi_index],
+            "ดาวสถิต": [p["ดาว"] for p in planets_out if p["ราศี"] == RASI_NAMES[rasi_index]]
+        }
+
+    sun_lon = lon["sun"]
+    moon_lon = lon["moon"]
+
+    sunrise_label = {"fixed": "06:00 คงที่", "province": f"จริงต่อจังหวัด (+{offset:.0f} นาทีจาก 06:00)"}.get(
+        sunrise_mode, f"กำหนดเอง (+{offset:.0f} นาทีจาก 06:00)")
+
+    return {
+        "ข้อมูลเกิด": {
+            "วันเกิด_คศ": f"{year}-{month:02d}-{day:02d}",
+            "เวลาเกิด": time_str,
+            "เวลาเกิดเป็นค่าประมาณ": time_estimated,
+            **({"หมายเหตุเวลาเกิด": (
+                "ไม่ทราบเวลาเกิดจริง ใช้ค่าเริ่มต้น 06:00 น. (สมมุติพระอาทิตย์ขึ้น ตามธรรมเนียมสุริยยาตร์ไทย) "
+                "ลัคนาและภพที่คำนวณได้เป็นค่าประมาณ ใช้เวลาเกิดจริงถ้ามี"
+            )} if time_estimated else {}),
+            "ระบบ": "สุริยยาตร์ (ตำราไทยดั้งเดิม)",
+            "สมมุติอาทิตย์ขึ้น": sunrise_label,
+        },
+        "ลัคนา": {
+            "ราศี": lakkana_rasi,
+            "องศา": round(lakkana_deg, 2),
+            "longitude": round(lakkana_lon, 4),
+            "ดาวเจ้าเรือน(ลัคนาธิปติ)": lakkana_lord,
+            "ฤกษ์": nakshatra_info(lakkana_lon),
+            "ตรียางค์": triyang_info(lakkana_lon),
+        },
+        "ตนุเศษ": result["tanuseth"],
+        "ดิถี": tithi_info(sun_lon, moon_lon),
+        "ดาว": planets_out,
+        "ภพ": bhava_map,
     }
 
 
@@ -568,16 +689,48 @@ def main():
                    help="เวลาเกิด HH:MM (24 ชม.) ถ้าไม่ระบุ ใช้ค่าเริ่มต้น 06:00 น. "
                         "(สมมุติพระอาทิตย์ขึ้น ตามธรรมเนียมสุริยยาตร์ไทยที่ verify แล้วในโปรเจกต์นี้ "
                         "ไม่ใช่ 06:55 ที่บางเครื่องมือใช้เป็น default)")
-    p.add_argument("--place", help="จังหวัด (ภาษาไทยหรือ bangkok)")
-    p.add_argument("--lat", type=float, help="ละติจูด (ถ้าไม่ระบุ --place)")
-    p.add_argument("--lon", type=float, help="ลองจิจูด")
-    p.add_argument("--ayanamsa", default="tropical", choices=["tropical", "lahiri"])
-    p.add_argument("--tz", type=float, default=7.0, help="timezone offset (default 7.0 สำหรับไทย)")
+    p.add_argument("--place", help="จังหวัด (ภาษาไทยหรือ bangkok) — สำหรับ suriyayat ใช้ชื่อจังหวัดไทยเต็ม "
+                                    "(เช่น ลำปาง) และจำเป็นเฉพาะเมื่อ --sunrise-mode province")
+    p.add_argument("--lat", type=float, help="ละติจูด (ถ้าไม่ระบุ --place) — ไม่ใช้กับ --ayanamsa suriyayat")
+    p.add_argument("--lon", type=float, help="ลองจิจูด — ไม่ใช้กับ --ayanamsa suriyayat")
+    p.add_argument("--ayanamsa", default="tropical", choices=["tropical", "lahiri", "suriyayat"],
+                   help="tropical/lahiri = ลัคนาดาราศาสตร์จริงจาก Swiss Ephemeris houses() | "
+                        "suriyayat = ตำราไทยดั้งเดิม (ไม่พึ่ง ephemeris) ตัวที่ reproduce ดวงที่โหรไทยอ่านจริง "
+                        "ดู README/SKILL.md ว่าทำไมสองแบบให้ลัคนาคนละราศีกัน")
+    p.add_argument("--sunrise-mode", default="fixed", choices=["fixed", "province"],
+                   help="เฉพาะ --ayanamsa suriyayat: fixed (ค่าเริ่มต้น) = อาทิตย์ขึ้น 06:00 คงที่ "
+                        "(ตรงกับดวงที่โหรไทยแบบตำราอ่านจริง ยืนยันแล้ว) | province = อาทิตย์ขึ้นจริงต่อจังหวัด "
+                        "(ต้องมี --place) ให้ผลตรงกับค่าเริ่มต้นของ myhora ซึ่งคลาดจากตำราไทยที่โหรใช้จริง")
+    p.add_argument("--sunrise-offset", type=float, default=None,
+                   help="เฉพาะ --ayanamsa suriyayat: กำหนดนาทีชดเชยอาทิตย์ขึ้นเอง (override --sunrise-mode)")
+    p.add_argument("--tz", type=float, default=7.0, help="timezone offset (default 7.0 สำหรับไทย) — ไม่ใช้กับ suriyayat")
     p.add_argument("--compare", action="store_true",
-                   help="เทียบสายนะ (ทรอปิคัล) กับนิรายนะ (Lahiri) เคียงกัน พร้อมฤกษ์ ตรียางค์ ดิถี และค่า ayanamsa")
+                   help="เทียบสายนะ (ทรอปิคัล) กับนิรายนะ (Lahiri) เคียงกัน พร้อมฤกษ์ ตรียางค์ ดิถี และค่า ayanamsa "
+                        "(ใช้ Swiss houses() ทั้งคู่ — ไม่รวม suriyayat)")
     p.add_argument("--format", default=None, choices=["text", "json"],
                    help="รูปแบบผลลัพธ์ (ดีฟอลต์: text เมื่อใช้ --compare, json เมื่อไม่ใช้)")
     args = p.parse_args()
+
+    fmt = args.format or ("text" if args.compare else "json")
+
+    time_estimated = args.time is None
+    time_str = args.time if args.time else "06:00"
+    if time_estimated:
+        print("หมายเหตุ: ไม่ได้ระบุเวลาเกิด ใช้ค่าเริ่มต้น 06:00 น. (สมมุติพระอาทิตย์ขึ้น) "
+              "ลัคนา/ฤกษ์/ภพที่คำนวณได้เป็นค่าประมาณ ระบุ --time ถ้ารู้เวลาเกิดจริง", file=sys.stderr)
+
+    if args.ayanamsa == "suriyayat":
+        if args.compare:
+            print("ERROR: --compare ใช้ได้เฉพาะ --ayanamsa tropical/lahiri (Swiss houses() ทั้งคู่) "
+                  "รัน --ayanamsa suriyayat แยกต่างหากแล้วเทียบผลเอง", file=sys.stderr)
+            sys.exit(1)
+        if args.sunrise_mode == "province" and not args.place and args.sunrise_offset is None:
+            print("ERROR: --sunrise-mode province ต้องระบุ --place (ชื่อจังหวัดไทยเต็ม เช่น ลำปาง)", file=sys.stderr)
+            sys.exit(1)
+        result = cast_chart_suriyayat(args.date, time_str, args.place, args.sunrise_mode,
+                                       args.sunrise_offset, time_estimated)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return
 
     if args.place:
         key = args.place.strip().lower() if args.place.encode().isascii() else args.place.strip()
@@ -591,14 +744,6 @@ def main():
     else:
         print("ERROR: ต้องระบุ --place หรือ --lat --lon", file=sys.stderr)
         sys.exit(1)
-
-    fmt = args.format or ("text" if args.compare else "json")
-
-    time_estimated = args.time is None
-    time_str = args.time if args.time else "06:00"
-    if time_estimated:
-        print("หมายเหตุ: ไม่ได้ระบุเวลาเกิด ใช้ค่าเริ่มต้น 06:00 น. (สมมุติพระอาทิตย์ขึ้น) "
-              "ลัคนา/ฤกษ์/ภพที่คำนวณได้เป็นค่าประมาณ ระบุ --time ถ้ารู้เวลาเกิดจริง", file=sys.stderr)
 
     if args.compare:
         result = compare_charts(args.date, time_str, lat, lon, args.tz, time_estimated)
