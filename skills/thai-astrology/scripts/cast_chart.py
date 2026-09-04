@@ -140,6 +140,98 @@ BHAVA_NAMES = ["ตนุ", "กฎุมพะ", "สหัชชะ", "พั�
                "ปัตนิ", "มรณะ", "ศุภะ", "กัมมะ", "ลาภะ", "วินาสนะ"]
 
 
+# ---------------------------------------------------------------------------
+# นักษัตร 27 ฤกษ์ / 9 ชื่อฤกษ์ / เจ้าฤกษ์ / ตรียางค์
+# ---------------------------------------------------------------------------
+
+# นักษัตร 27 ดวง เรียงตามลำดับ (แต่ละดวงกว้าง 13°20')
+NAKSHATRA_NAMES = [
+    "อัศวินี", "ภรณี", "กฤติกา", "โรหิณี", "มฤคศิระ", "อารทรา", "ปุนัพสุ",
+    "ปุษยะ", "อาศเลษา", "มฆา", "บุรพผลคุนี", "อุตรผลคุนี", "หัสตะ", "จิตรา",
+    "สวาติ", "วิสาขะ", "อนุราธา", "เชษฐา", "มูละ", "บุรพาษาฒ", "อุตราษาฒ",
+    "ศรวณะ", "ธนิษฐา", "ศตภิษัช", "บุรพภัทรบท", "อุตรภัทรบท", "เรวดี",
+]
+
+# ชื่อฤกษ์ 9 หมู่ วนซ้ำทุก 9 นักษัตร (นักษัตรที่ 1 = ทลิทโท)
+RUEK_NAMES = [
+    "ทลิทโท", "มหัทธโน", "โจโร", "ภูมิปาโล", "เทศาตรี",
+    "เทวี", "เพชฌฆาต", "ราชา", "สมโณ",
+]
+
+# ความหมายย่อของแต่ละฤกษ์ (ใช้ประกอบการตีความ ไม่ใช่ผลคำนวณ)
+RUEK_MEANINGS = {
+    "ทลิทโท": "ผู้ใหญ่อุปถัมภ์ ตั้งตัวจากศูนย์ ขยันอดทน",
+    "มหัทธโน": "ทรัพย์สิน การค้า มั่งคั่งจากความเพียร",
+    "โจโร": "ช่วงชิง แข่งขัน กล้าเสี่ยง ต้องระวังการสูญเสีย",
+    "ภูมิปาโล": "หลักฐานมั่นคง ที่ดิน บ้านเรือน คุ้มครองรักษา",
+    "เทศาตรี": "พลัดถิ่น เคลื่อนไหว ทำหลายอย่าง ค้าขายต่างแดน",
+    "เทวี": "เสน่ห์ ศิลปะ ความงาม เป็นที่รักของผู้คน",
+    "เพชฌฆาต": "เด็ดขาด กล้าหาญ งานที่ต้องตัดสินใจแทนผู้อื่น",
+    "ราชา": "อำนาจ เกียรติยศ ผู้นำ งานราชการ",
+    "สมโณ": "สงบ สันโดษ วิชาความรู้ ธรรมะ",
+}
+
+# เจ้าฤกษ์ประจำนักษัตร วนซ้ำทุก 9 ดวง (ลำดับเดียวกับทศาวิมโศตตรี)
+NAKSHATRA_LORDS = [
+    "เกตุ", "ศุกร์", "อาทิตย์", "จันทร์", "อังคาร",
+    "ราหู", "พฤหัสบดี", "เสาร์", "พุธ",
+]
+
+
+def nakshatra_info(longitude: float):
+    """คืนข้อมูลฤกษ์ของลองจิจูดที่ให้มา (นักษัตร ชื่อฤกษ์ เจ้าฤกษ์ บาท ความคืบหน้า)"""
+    longitude = longitude % 360
+    span = 40.0 / 3.0  # 13°20'
+    idx = int(longitude // span)
+    into = longitude - idx * span
+    remaining = span - into
+    return {
+        "นักษัตรที่": idx + 1,
+        "นักษัตร": NAKSHATRA_NAMES[idx],
+        "ฤกษ์": RUEK_NAMES[idx % 9],
+        "เจ้าฤกษ์": NAKSHATRA_LORDS[idx % 9],
+        "บาท": int(into // (span / 4)) + 1,
+        "เดินไปแล้ว_%": round(into / span * 100, 1),
+        "เหลืออีก_องศา": round(remaining, 3),
+        "ฤกษ์ถัดไป": RUEK_NAMES[(idx + 1) % 9],
+        "นักษัตรถัดไป": NAKSHATRA_NAMES[(idx + 1) % 27],
+        "เจ้าฤกษ์ถัดไป": NAKSHATRA_LORDS[(idx + 1) % 9],
+    }
+
+
+def triyang_info(longitude: float):
+    """คืนตรียางค์ (แบ่งราศีละ 3 ส่วน ส่วนละ 10 องศา) และเจ้าตรียางค์"""
+    longitude = longitude % 360
+    rasi_idx = int(longitude // 30)
+    deg_in_rasi = longitude - rasi_idx * 30
+    part = int(deg_in_rasi // 10)          # 0,1,2
+    owner_idx = (rasi_idx + 4 * part) % 12  # ราศีเดิม → ที่ 5 → ที่ 9 (ธาตุเดียวกัน)
+    owner_rasi = RASI_NAMES[owner_idx]
+    return {
+        "ตรียางค์ที่": part + 1,
+        "ช่วงองศา": f"{part * 10}-{part * 10 + 10}",
+        "ราศีตรียางค์": owner_rasi,
+        "เจ้าตรียางค์": RASI_LORDS[owner_rasi],
+    }
+
+
+def tithi_info(sun_lon: float, moon_lon: float):
+    """คืนดิถี (ขึ้น/แรม กี่ค่ำ) จากระยะห่างจันทร์-อาทิตย์ ค่านี้ไม่ขึ้นกับระบบราศี"""
+    elong = (moon_lon - sun_lon) % 360
+    tithi_no = int(elong // 12) + 1          # 1-30
+    if tithi_no <= 15:
+        phase, day = "ขึ้น", tithi_no
+    else:
+        phase, day = "แรม", tithi_no - 15
+    illum = round((1 - __import__("math").cos(__import__("math").radians(elong))) / 2 * 100, 1)
+    return {
+        "ระยะจันทร์-อาทิตย์": round(elong, 2),
+        "ดิถีที่": tithi_no,
+        "ดิถี": f"{phase} {day} ค่ำ",
+        "ส่วนสว่าง_%": illum,
+    }
+
+
 def parse_date_thai_or_western(date_str: str):
     """รับวันที่ในรูป YYYY-MM-DD โดยถ้า YYYY > 2400 ถือว่าเป็น พ.ศ. แล้วแปลงเป็น ค.ศ."""
     year, month, day = map(int, date_str.split("-"))
@@ -179,7 +271,8 @@ def evaluate_standard(planet_name: str, rasi: str, deg_in_rasi: float):
 
 
 def cast_chart(date_str: str, time_str: str, lat: float, lon: float,
-               ayanamsa: str = "tropical", tz_offset: float = 7.0):
+               ayanamsa: str = "tropical", tz_offset: float = 7.0,
+               time_estimated: bool = False):
     """คำนวณดวงชะตา return dict พร้อมข้อมูลครบ"""
     year, month, day = parse_date_thai_or_western(date_str)
     hour, minute = map(int, time_str.split(":"))
@@ -209,6 +302,8 @@ def cast_chart(date_str: str, time_str: str, lat: float, lon: float,
             "องศา": round(deg_in_rasi, 2),
             "longitude": round(lon_deg, 4),
             "มาตรฐาน": standard,
+            "ฤกษ์": nakshatra_info(lon_deg)["ฤกษ์"],
+            "นักษัตร": nakshatra_info(lon_deg)["นักษัตร"],
         })
 
     # เกตุ = ตรงข้ามราหู
@@ -242,33 +337,246 @@ def cast_chart(date_str: str, time_str: str, lat: float, lon: float,
             "ดาวสถิต": [p["ดาว"] for p in planets_out if p["ราศี"] == RASI_NAMES[rasi_index]]
         }
 
+    ayan_value = swe.get_ayanamsa_ut(jd_ut) if ayanamsa.lower() == "lahiri" else 0.0
+
+    sun_lon = planets_out[0]["longitude"]
+    moon_lon = planets_out[1]["longitude"]
+
     return {
         "ข้อมูลเกิด": {
             "วันเกิด_คศ": f"{year}-{month:02d}-{day:02d}",
             "เวลาเกิด": time_str,
+            "เวลาเกิดเป็นค่าประมาณ": time_estimated,
+            **({"หมายเหตุเวลาเกิด": (
+                "ไม่ทราบเวลาเกิดจริง ใช้ค่าเริ่มต้น 06:00 น. (สมมุติพระอาทิตย์ขึ้น ตามธรรมเนียมสุริยยาตร์ไทย) "
+                "ต่างจาก default 06:55 ของบางเครื่องมือ (เช่น myhora) ซึ่งพิสูจน์แล้วว่าให้ลัคนา/ฤกษ์คลาดเคลื่อน "
+                "ลัคนาและภพที่คำนวณได้เป็นค่าประมาณ ใช้เวลาเกิดจริงถ้ามี"
+            )} if time_estimated else {}),
             "ละติจูด": lat,
             "ลองจิจูด": lon,
-            "ระบบ": "Sayana (Tropical)" if ayanamsa == "tropical" else "Nirayana (Lahiri)"
+            "ระบบ": "Sayana (Tropical)" if ayanamsa == "tropical" else "Nirayana (Lahiri)",
+            "ayanamsa": round(ayan_value, 4),
+            "julian_day_ut": round(jd_ut, 6),
         },
         "ลัคนา": {
             "ราศี": lakkana_rasi,
             "องศา": round(lakkana_deg, 2),
-            "ดาวเจ้าเรือน(ลัคนาธิปติ)": lakkana_lord
+            "longitude": round(lakkana_lon, 4),
+            "ดาวเจ้าเรือน(ลัคนาธิปติ)": lakkana_lord,
+            "ฤกษ์": nakshatra_info(lakkana_lon),
+            "ตรียางค์": triyang_info(lakkana_lon),
         },
+        "ดิถี": tithi_info(sun_lon, moon_lon),
         "ดาว": planets_out,
         "ภพ": bhava_map
     }
 
 
+# ---------------------------------------------------------------------------
+# โหมดเทียบสองระบบ: สายนะ (Sayana/Tropical) vs นิรายนะ (Nirayana/Lahiri)
+# ---------------------------------------------------------------------------
+
+# อักขระไทยที่ไม่กินความกว้างเวลาแสดงผล (สระบน-ล่าง วรรณยุกต์)
+_ZERO_WIDTH = set("ั") | set(chr(c) for c in range(0x0E34, 0x0E3B)) | \
+              set(chr(c) for c in range(0x0E47, 0x0E4F))
+
+
+def _w(text: str) -> int:
+    """ความกว้างแสดงผลโดยประมาณ ไม่นับสระ/วรรณยุกต์ที่ซ้อนบนล่าง"""
+    return sum(0 if ch in _ZERO_WIDTH else 1 for ch in str(text))
+
+
+def _pad(text: str, width: int) -> str:
+    text = str(text)
+    return text + " " * max(0, width - _w(text))
+
+
+def _asc_longitude(jd_ut: float, lat: float, lon: float) -> float:
+    return swe.houses(jd_ut, lat, lon, b'P')[1][0]
+
+
+def compare_charts(date_str: str, time_str: str, lat: float, lon: float,
+                   tz_offset: float = 7.0, time_estimated: bool = False):
+    """ผูกดวงทั้งสองระบบแล้วคืนโครงสร้างเปรียบเทียบ"""
+    trop = cast_chart(date_str, time_str, lat, lon, "tropical", tz_offset, time_estimated)
+    nira = cast_chart(date_str, time_str, lat, lon, "lahiri", tz_offset, time_estimated)
+
+    jd_ut = trop["ข้อมูลเกิด"]["julian_day_ut"]
+    ayan = nira["ข้อมูลเกิด"]["ayanamsa"]
+
+    # อัตราลัคนาเดิน (องศา/นาที) จากผลต่าง 4 นาที — ใช้ได้กับทั้งสองระบบ
+    a0 = _asc_longitude(jd_ut, lat, lon)
+    a1 = _asc_longitude(jd_ut + 4.0 / 1440.0, lat, lon)
+    rate = ((a1 - a0) % 360) / 4.0
+
+    def boundary(chart):
+        deg = chart["ลัคนา"]["องศา"]
+        to_next = 30.0 - deg
+        return {
+            "องศาถึงเส้นแบ่งราศีถัดไป": round(to_next, 3),
+            "นาทีของเวลาเกิด": round(to_next / rate, 1) if rate else None,
+            "องศาจากเส้นแบ่งราศีก่อนหน้า": round(deg, 3),
+            "นาทีจากเส้นแบ่งก่อนหน้า": round(deg / rate, 1) if rate else None,
+        }
+
+    def by_name(chart):
+        return {p["ดาว"]: p for p in chart["ดาว"]}
+
+    def bhava_of(chart):
+        out = {}
+        for bname, b in chart["ภพ"].items():
+            for planet in b["ดาวสถิต"]:
+                out[planet] = (b["ภพที่"], bname)
+        return out
+
+    tp, np_ = by_name(trop), by_name(nira)
+    tb, nb = bhava_of(trop), bhava_of(nira)
+
+    planets = []
+    for name in [p["ดาว"] for p in trop["ดาว"]]:
+        a, b = tp[name], np_[name]
+        planets.append({
+            "ดาว": name,
+            "สายนะ": {"ราศี": a["ราศี"], "องศา": a["องศา"], "มาตรฐาน": a["มาตรฐาน"],
+                       "ภพ": tb.get(name, (None, "—"))[0], "ชื่อภพ": tb.get(name, (None, "—"))[1]},
+            "นิรายนะ": {"ราศี": b["ราศี"], "องศา": b["องศา"], "มาตรฐาน": b["มาตรฐาน"],
+                         "ภพ": nb.get(name, (None, "—"))[0], "ชื่อภพ": nb.get(name, (None, "—"))[1]},
+            "ต่างราศี": a["ราศี"] != b["ราศี"],
+            "ต่างภพ": tb.get(name, (None,))[0] != nb.get(name, (None,))[0],
+        })
+
+    return {
+        "ข้อมูลเกิด": {
+            "วันเกิด_คศ": trop["ข้อมูลเกิด"]["วันเกิด_คศ"],
+            "เวลาเกิด": time_str,
+            "เวลาเกิดเป็นค่าประมาณ": time_estimated,
+            **({"หมายเหตุเวลาเกิด": trop["ข้อมูลเกิด"]["หมายเหตุเวลาเกิด"]} if time_estimated else {}),
+            "ละติจูด": lat,
+            "ลองจิจูด": lon,
+            "ayanamsa_Lahiri": ayan,
+            "อัตราลัคนาเดิน_องศาต่อนาที": round(rate, 4),
+        },
+        "ลัคนา": {
+            "สายนะ": {**trop["ลัคนา"], "ระยะถึงเส้นแบ่งราศี": boundary(trop)},
+            "นิรายนะ": {**nira["ลัคนา"], "ระยะถึงเส้นแบ่งราศี": boundary(nira)},
+            "ต่างราศี": trop["ลัคนา"]["ราศี"] != nira["ลัคนา"]["ราศี"],
+        },
+        "ดิถี": trop["ดิถี"],
+        "ดาว": planets,
+        "สรุปความต่าง": {
+            "จำนวนดาวที่ต่างราศี": sum(1 for p in planets if p["ต่างราศี"]),
+            "จำนวนดาวที่ต่างภพ": sum(1 for p in planets if p["ต่างภพ"]),
+            "ลัคนาต่างราศี": trop["ลัคนา"]["ราศี"] != nira["ลัคนา"]["ราศี"],
+        },
+    }
+
+
+def render_compare_text(c: dict) -> str:
+    """แปลงผลเทียบเป็นตารางอ่านง่าย"""
+    L, out = [], []
+    b = c["ข้อมูลเกิด"]
+    out.append("=" * 74)
+    out.append(f"เทียบดวงสองระบบ  {b['วันเกิด_คศ']}  {b['เวลาเกิด']} น.  "
+               f"({b['ละติจูด']}, {b['ลองจิจูด']})")
+    out.append(f"ayanamsa Lahiri ณ วันเกิด = {b['ayanamsa_Lahiri']}°   "
+               f"อัตราลัคนาเดิน {b['อัตราลัคนาเดิน_องศาต่อนาที']}°/นาที")
+    if b.get("เวลาเกิดเป็นค่าประมาณ"):
+        out.append(f"!! {b['หมายเหตุเวลาเกิด']}")
+    out.append("=" * 74)
+
+    s_, n_ = c["ลัคนา"]["สายนะ"], c["ลัคนา"]["นิรายนะ"]
+    out.append("")
+    out.append("── ลัคนา ──")
+    out.append(f"  สายนะ (ทรอปิคัล) : {_pad(s_['ราศี'], 7)} {s_['องศา']:6.2f}°  "
+               f"(สัมบูรณ์ {s_['longitude']:8.3f}°)  เจ้าเรือน {s_['ดาวเจ้าเรือน(ลัคนาธิปติ)']}")
+    out.append(f"  นิรายนะ (Lahiri) : {_pad(n_['ราศี'], 7)} {n_['องศา']:6.2f}°  "
+               f"(สัมบูรณ์ {n_['longitude']:8.3f}°)  เจ้าเรือน {n_['ดาวเจ้าเรือน(ลัคนาธิปติ)']}")
+    out.append("  >> ลัคนาตกคนละราศี" if c["ลัคนา"]["ต่างราศี"] else "  >> ลัคนาตกราศีเดียวกัน")
+    out.append("")
+    out.append("  ความไวต่อเวลาเกิด (ระยะจากลัคนาถึงเส้นแบ่งราศี)")
+    for label, ch in (("สายนะ  ", s_), ("นิรายนะ", n_)):
+        bd = ch["ระยะถึงเส้นแบ่งราศี"]
+        flag = "   <-- ใกล้เส้นแบ่ง ระวังเวลาเกิดคลาด" if min(
+            bd["องศาถึงเส้นแบ่งราศีถัดไป"], bd["องศาจากเส้นแบ่งราศีก่อนหน้า"]) < 2 else ""
+        out.append(f"    {label} : เข้าราศีมาแล้ว {bd['องศาจากเส้นแบ่งราศีก่อนหน้า']:6.2f}° "
+                   f"({bd['นาทีจากเส้นแบ่งก่อนหน้า']:5.1f} นาที) | "
+                   f"อีก {bd['องศาถึงเส้นแบ่งราศีถัดไป']:6.2f}° "
+                   f"({bd['นาทีของเวลาเกิด']:5.1f} นาที) จะข้ามราศี{flag}")
+
+    out.append("")
+    out.append("── ฤกษ์ของลัคนา ──")
+    for label, ch in (("สายนะ  ", s_), ("นิรายนะ", n_)):
+        r = ch["ฤกษ์"]
+        out.append(f"  {label} : นักษัตรที่ {r['นักษัตรที่']} {r['นักษัตร']} = {r['ฤกษ์']}ฤกษ์ "
+                   f"บาท {r['บาท']} เดินไป {r['เดินไปแล้ว_%']}%")
+        out.append(f"            เหลืออีก {r['เหลืออีก_องศา']}° จะเข้า {r['ฤกษ์ถัดไป']}ฤกษ์ "
+                   f"({r['นักษัตรถัดไป']} เจ้าฤกษ์ {r['เจ้าฤกษ์ถัดไป']}) | เจ้าฤกษ์ปัจจุบัน {r['เจ้าฤกษ์']}")
+        out.append(f"            ความหมาย {r['ฤกษ์']}: {RUEK_MEANINGS.get(r['ฤกษ์'], '—')}")
+
+    out.append("")
+    out.append("── ตรียางค์ของลัคนา ──")
+    for label, ch in (("สายนะ  ", s_), ("นิรายนะ", n_)):
+        t = ch["ตรียางค์"]
+        out.append(f"  {label} : ตรียางค์ที่ {t['ตรียางค์ที่']} ({t['ช่วงองศา']}°) "
+                   f"= ราศี{t['ราศีตรียางค์']} เจ้าตรียางค์ {t['เจ้าตรียางค์']}")
+
+    d = c["ดิถี"]
+    out.append("")
+    out.append("── ดิถี (ค่าเดียวกันทั้งสองระบบ) ──")
+    out.append(f"  {d['ดิถี']}  ระยะจันทร์-อาทิตย์ {d['ระยะจันทร์-อาทิตย์']}°  "
+               f"ส่วนสว่าง {d['ส่วนสว่าง_%']}%")
+
+    out.append("")
+    out.append("── ตำแหน่งดาว ──")
+    hdr = (f"  {_pad('ดาว', 10)}{_pad('สายนะ', 20)}{_pad('นิรายนะ', 20)}ต่าง")
+    out.append(hdr)
+    out.append("  " + "-" * 54)
+    for p in c["ดาว"]:
+        a, bb = p["สายนะ"], p["นิรายนะ"]
+        ca = f"{a['ราศี']} {a['องศา']:5.2f}° {a['มาตรฐาน']}"
+        cb = f"{bb['ราศี']} {bb['องศา']:5.2f}° {bb['มาตรฐาน']}"
+        out.append(f"  {_pad(p['ดาว'], 10)}{_pad(ca, 20)}{_pad(cb, 20)}"
+                   f"{'ต่างราศี' if p['ต่างราศี'] else ''}")
+
+    out.append("")
+    out.append("── ภพที่ดาวสถิต (นับจากลัคนาของแต่ละระบบ) ──")
+    out.append(f"  {_pad('ดาว', 10)}{_pad('สายนะ', 22)}{_pad('นิรายนะ', 22)}ต่าง")
+    out.append("  " + "-" * 58)
+    for p in c["ดาว"]:
+        a, bb = p["สายนะ"], p["นิรายนะ"]
+        ca = f"ภพ {a['ภพ']} {a['ชื่อภพ']}" if a["ภพ"] else "—"
+        cb = f"ภพ {bb['ภพ']} {bb['ชื่อภพ']}" if bb["ภพ"] else "—"
+        out.append(f"  {_pad(p['ดาว'], 10)}{_pad(ca, 22)}{_pad(cb, 22)}"
+                   f"{'ต่างภพ' if p['ต่างภพ'] else ''}")
+
+    sm = c["สรุปความต่าง"]
+    out.append("")
+    out.append("── สรุป ──")
+    out.append(f"  ลัคนาต่างราศี: {'ใช่' if sm['ลัคนาต่างราศี'] else 'ไม่'}   "
+               f"ดาวที่ตกคนละราศี {sm['จำนวนดาวที่ต่างราศี']} ดวง   "
+               f"ดาวที่ตกคนละภพ {sm['จำนวนดาวที่ต่างภพ']} ดวง")
+    out.append("  ฤกษ์และตรียางค์ของลัคนาเป็นตัวชี้ขาดว่าโหรใช้ระบบไหน "
+               "เพราะมันระบุองศา ไม่ใช่แค่ราศี")
+    out.append("")
+    return "\n".join(out)
+
+
 def main():
     p = argparse.ArgumentParser(description="ผูกดวงโหราศาสตร์ไทย")
     p.add_argument("--date", required=True, help="วันเกิด YYYY-MM-DD (พ.ศ. หรือ ค.ศ.)")
-    p.add_argument("--time", required=True, help="เวลาเกิด HH:MM (24 ชม.)")
+    p.add_argument("--time", default=None,
+                   help="เวลาเกิด HH:MM (24 ชม.) ถ้าไม่ระบุ ใช้ค่าเริ่มต้น 06:00 น. "
+                        "(สมมุติพระอาทิตย์ขึ้น ตามธรรมเนียมสุริยยาตร์ไทยที่ verify แล้วในโปรเจกต์นี้ "
+                        "ไม่ใช่ 06:55 ที่บางเครื่องมือใช้เป็น default)")
     p.add_argument("--place", help="จังหวัด (ภาษาไทยหรือ bangkok)")
     p.add_argument("--lat", type=float, help="ละติจูด (ถ้าไม่ระบุ --place)")
     p.add_argument("--lon", type=float, help="ลองจิจูด")
     p.add_argument("--ayanamsa", default="tropical", choices=["tropical", "lahiri"])
     p.add_argument("--tz", type=float, default=7.0, help="timezone offset (default 7.0 สำหรับไทย)")
+    p.add_argument("--compare", action="store_true",
+                   help="เทียบสายนะ (ทรอปิคัล) กับนิรายนะ (Lahiri) เคียงกัน พร้อมฤกษ์ ตรียางค์ ดิถี และค่า ayanamsa")
+    p.add_argument("--format", default=None, choices=["text", "json"],
+                   help="รูปแบบผลลัพธ์ (ดีฟอลต์: text เมื่อใช้ --compare, json เมื่อไม่ใช้)")
     args = p.parse_args()
 
     if args.place:
@@ -284,7 +592,21 @@ def main():
         print("ERROR: ต้องระบุ --place หรือ --lat --lon", file=sys.stderr)
         sys.exit(1)
 
-    result = cast_chart(args.date, args.time, lat, lon, args.ayanamsa, args.tz)
+    fmt = args.format or ("text" if args.compare else "json")
+
+    time_estimated = args.time is None
+    time_str = args.time if args.time else "06:00"
+    if time_estimated:
+        print("หมายเหตุ: ไม่ได้ระบุเวลาเกิด ใช้ค่าเริ่มต้น 06:00 น. (สมมุติพระอาทิตย์ขึ้น) "
+              "ลัคนา/ฤกษ์/ภพที่คำนวณได้เป็นค่าประมาณ ระบุ --time ถ้ารู้เวลาเกิดจริง", file=sys.stderr)
+
+    if args.compare:
+        result = compare_charts(args.date, time_str, lat, lon, args.tz, time_estimated)
+        print(render_compare_text(result) if fmt == "text"
+              else json.dumps(result, ensure_ascii=False, indent=2))
+        return
+
+    result = cast_chart(args.date, time_str, lat, lon, args.ayanamsa, args.tz, time_estimated)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
